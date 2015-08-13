@@ -365,9 +365,41 @@ Makefile</pre>
 				<p>
 					Hopefully you should recognise all of the above commands, if not their values. The
 					first puts a 1 into <span class="armCodeInline">r1</span> as before. The second
-					shifts the binary representation of this 1 left by 15 places. We want to turn
-					pin 47 on, which requires that we have a 1 in the 15th bit of this next message (other values would work for other pins). Finally we write it out to the address which is 32<sub>10</sub> added to the GPIO controller address, which happens to be the address to write to
-					turn a pin on.</p>
+					shifts the binary representation of this 1 left by 15 places. You may be wondering, why 15?  Why don't we use 47 here.  The answer to that involves some background in addressing which we'll cover briefly here, we write to memory by writing to 4 byte registers.  As we know 4 bytes is equivalent to 32 bits which is substantially less than 47.  A 47 position left logical shift would overrun the size of the register.  There are actually two SET and two CLR registers, the first for pins 0-31 and the second for pins 32-63.  We are using the second register so we truncate the first 32 bits making the shift 47-32, or 15 bits.  We want to turn pin 47 on, which requires that we have a 1 in the 15th bit of this next message (other values would work for other pins). Finally we write it out to the GPSET1 address which is 32<sub>10</sub> added to the GPIO controller address, which happens to be the address to write to turn a pin on.  Likewise, the pin could be turned off with a similar set of instructions, but writing to the GPCLR1 register at offset 44<sub>10</sub></p>
+					<table border="1" style="width:100%">
+						<tr>
+							<th colspan="6">GPSET and GPCLEAR Registers</th>
+						</tr>
+						<tr>
+							<th>Register</th>
+							<th>Hex Offset</th>
+							<th>Decimal Offset</th>
+							<th>Respective Pins</th>
+						</tr>
+						<tr>
+							<td>GPSET0</td>
+							<td>0x1C</td>
+							<td>28</td>
+							<td>0-31</td>
+						<tr>
+							<td>GPSET1</td>
+							<td>0x20</td>
+							<td>32</td>
+							<td>32-63</td>
+						</tr>
+						<tr>
+							<td>GPCLR0</td>
+							<td>0x28</td>
+							<td>40</td>
+							<td>0-31</td>
+						</tr>
+						<tr>
+							<td>GPCLR1</td>
+							<td>0x2C</td>
+							<td>44</td>
+							<td>32-63</td>
+						</tr>
+					</table>
 				<h2 id="happy">
 					6 Happily Ever After</h2>
 				<p>
