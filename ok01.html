@@ -83,15 +83,15 @@ Makefile</pre>
 				<p>
 					Copy the following instruction.</p>
 				<div class="armCodeBlock"><p>
-					ldr r0,=0x20200000
+					ldr r0,=0x3f200000
 				</p></div>
 				<div class="commandBox"><p>
 					<span class="armCodeInline">ldr reg,=val</span> puts the number <span class="armCodeInline">
 						val</span> into the register named <span class="armCodeInline">reg</span>.</p></div>
 				<p>
-					That is our first command. It tells the processor to store the number 0x20200000
+					That is our first command. It tells the processor to store the number 0x3f200000
 					into the register r0. I shall need to answer two questions here, what is a register,
-					and how is 0x20200000 a number?</p>
+					and how is 0x3f200000 a number?</p>
 				<div class="informationBox"><p>
 					A single register can store any integer between 0 and 4,294,967,295 inclusive on
 					the Raspberry Pi, which might seem like a large amount of memory, but it is only
@@ -106,7 +106,7 @@ Makefile</pre>
 					I've used r0 in this example, but I could very well have used any of the others.
 					As long as you're consistent, it doesn't matter.</p>
 				<p>
-					0x20200000 is indeed a number. However it is written in Hexadecimal notation. To
+					0x3f200000 is indeed a number. However it is written in Hexadecimal notation. To
 					learn more about hexadecimal expand the box below:</p>
 				<div class="expandableHeader" onclick="return ExpandToggle('hex')">
 					<p>
@@ -157,7 +157,7 @@ Makefile</pre>
 						very useful because every hexadecimal digit is exactly four binary digits long.
 						This has the nice side effect that a lot of computer numbers are round numbers in
 						hexadecimal, even though they're not in decimal. For example, in the assembly code
-						just above I used the number 20200000<sub>16</sub>. If I had chose to write this
+						just above I used the number 3f200000<sub>16</sub>. If I had chose to write this
 						in decimal it would have been 538968064<sub>10</sub>, which is much less memorable.
 					</p>
 					<p>
@@ -180,12 +180,12 @@ Makefile</pre>
 						&times;16<sup>0</sup> = 2&times;256 + 3&times;16 + 7&times;1 = 512 + 48 + 7 = 567.</p>
 				</div>
 				<p>
-					So our first command is to put the number 20200000<sub>16</sub> into r0. That doesn't
+					So our first command is to put the number 3f200000<sub>16</sub> into r0. That doesn't
 					sound like it would be much use, but it is. In computers, there are an awful lot
 					of chunks of memory and devices. In order to access them all, we give each one an
 					address. Much like a postal address or a web address this is just a means of identifying
 					the location of the device or chunks of memory we want. Addresses in computers are
-					just numbers, and so the number 20200000<sub>16</sub> happens to be the address
+					just numbers, and so the number 3f200000<sub>16</sub> happens to be the address
 					of the GPIO controller. This is just a design decision taken by the manufacturers,
 					they could have used any other address (providing it didn't conflict with anything
 					else). I know this address only because I looked it up in a manual<a class="noteLink"
@@ -202,8 +202,8 @@ Makefile</pre>
 					needs a few numbers in order to understand what to do.</p>
 				<div class="armCodeBlock"><p>
 					mov r1,#1<br />
-					lsl r1,#18<br />
-					str r1,[r0,#4]<br />
+					lsl r1,#21<br />
+					str r1,[r0,#16]<br />
 				</p></div>
 				<div class="commandBox"><p>
 					<span class="armCodeInline">mov reg,#val</span> puts the number <span class="armCodeInline">
@@ -217,13 +217,13 @@ Makefile</pre>
 						class="armCodeInline">reg</span> at the address given by <span class="armCodeInline">
 							dest</span> + <span class="armCodeInline">val</span>.</p></div>
 				<p>
-					These commands enable output to the 16th GPIO pin. First we get a necessary value
+					These commands enable output to the 47th GPIO pin. First we get a necessary value
 					in r1, then send it to the GPIO controller. Since the first two instructions are
 					just trying to get a value into r1, we could use another <span class="armCodeInline">
 						ldr</span> command as before, but it will be useful to us later to be able to
 					set any given GPIO pin, so it is better to deduce the value from a formula than
-					write it straight in. The OK LED is wired to the 16th GPIO pin, and so we need to
-					send a command to enable the 16th pin.</p>
+					write it straight in. The OK/ACT LED is wired to the 47th GPIO pin, and so we need to
+					send a command to enable the 47th pin.</p>
 				<p>
 					The value in r1 is needed to enable the LED pin. The first line puts the number
 					1<sub>10</sub> into r1. The <span class="armCodeInline">mov</span> command is faster
@@ -244,7 +244,7 @@ Makefile</pre>
 					The second instruction is <span class="armCodeInline">lsl</span> or logical shift
 					left. This means shift the binary representation for the first argument left by
 					the second argument. In this case this will shift the binary representation of 1<sub>10</sub>
-					(which is 1<sub>2</sub>) left by 18 places (making it 1000000000000000000<sub>2</sub>=262144<sub>10</sub>).</p>
+					(which is 1<sub>2</sub>) left by 21 places (making it 1000000000000000000000<sub>2</sub>=2097152<sub>10</sub>).</p>
 				<p>
 					If you are unfamiliar with binary, expand the box below:</p>
 				<div class="expandableHeader" onclick="return ExpandToggle('binary')">
@@ -332,15 +332,15 @@ Makefile</pre>
 					seemingly just to keep OS Developers on their toes. Consider yourself warned.</p>
 				<div class="armCodeBlock"><p>
 					mov r1,#1<br />
-					lsl r1,#16<br />
-					str r1,[r0,#40]<br />
+					lsl r1,#15<br />
+					str r1,[r0,#32]<br />
 				</p></div>
 				<p>
 					Hopefully you should recognise all of the above commands, if not their values. The
 					first puts a 1 into <span class="armCodeInline">r1</span> as before. The second
 					shifts the binary representation of this 1 left by 16 places. Since we want to turn
 					pin 16 off, we need to have a 1 in the 16th bit of this next message (other values
-					would work for other pins). Finally we write it out to the address which is 40<sub>10</sub>
+					would work for other pins). Finally we write it out to the address which is 32<sub>10</sub>
 					added to the GPIO controller address, which happens to be the address to write to
 					turn a pin off (28 would turn the pin on).</p>
 				<h2 id="happy">
@@ -429,7 +429,7 @@ Makefile</pre>
 						it, but, if you must, it can be found here <a class="icon-pdf" href="downloads/SoC-Peripherals.pdf"
 							title="Broadcom BCM2835 ARM Peripherals">SoC-Peripherals.pdf</a>. For added
 							confusion, the manual uses a different addressing system. An address listed as
-							0x7E200000 would be 0x20200000 in our OS.</li>
+							0x7E200000 would be 0x3f200000 in our OS.</li>
 					<li><a name="note4" /><sup>[4]<a class="noteBackLink" href="#note4a">^</a></sup> Only
 						values which have a binary representation which only has 1s in the first 8 bits
 						of the representation. In other words, 8 1s or 0s followed by only 0s.</li>

@@ -78,11 +78,11 @@
 					2 The All Together</h2>
 				<p>
 					I mentioned briefly last time that the status LED can be turned off again by writing
-					to an offset of 28 from the GPIO controller instead of 40 (i.e. <span class="armCodeInline">
-						str r1,[r0,#28]</span>). Thus, you need to modify the code from OK01 to turn
+					to an offset of 44 from the GPIO controller instead of 32 (i.e. <span class="armCodeInline">
+						str r1,[r0,#44]</span>). Thus, you need to modify the code from OK01 to turn
 					the LED on, run the wait code, turn it off, run the wait code again, and then include
 					a branch back to the beginning. Note, it is not necessary to re-enable the output
-					to GPIO 16, we need only do that once. If you're being efficient, which I strongly
+					to GPIO 47, we need only do that once. If you're being efficient, which I strongly
 					encourage, you should be able to reuse the value of <span class="armCodeInline">r1</span>.
 					As with all lessons, a full solution to this can be found on the <a href="downloads.html">
 						download page</a>. Be careful to make sure all of your labels are unique. When
@@ -90,12 +90,12 @@
 					<span class="armCodeInline">wait1$</span>.
 				</p>
 				<p>
-					On my Raspberry Pi it flashes about twice a second. this could easily be altered
+					On my Raspberry Pi it flashes about once every two seconds. this could easily be altered
 					by changing the value we set <span class="armCodeInline">r2</span> to. However,
 					unfortunately we can't precisely predict the speed this runs at. If you didn't manage
 					to get this working see our trouble shooting page, otherwise, congratulations.</p>
 				<p>
-					In this lesson we've learnt two more assembly commands, <span class="armCodeInline">
+					In this lesson we've learned two more assembly commands, <span class="armCodeInline">
 						sub</span> and <span class="armCodeInline">cmp</span>, as well as learning about
 					conditional execution in ARM.</p>
 				<p>
