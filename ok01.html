@@ -4,6 +4,15 @@
 	<title>Lesson 1 OK01</title>
 	<link href="stylesheet.css" rel="Stylesheet" type="text/css" />
 	<script language="javascript" type="text/javascript" src="script.js"></script>
+	<style>
+	table, th, td {
+	    border: 1px solid black;
+	    border-collapse: collapse;
+	}
+	th, td {
+	    padding: 5px;
+}
+</style>
 </head>
 <body>
 	<div id="contentAll">
@@ -16,8 +25,7 @@
 				<p>
 					The OK01 lesson contains an explanation about how to get started and teaches how
 					to enable the 'OK' or 'ACT' <strong title="Light Emitting Diode">LED</strong> on the Raspberry
-					Pi board near the RCA and USB ports. This light was originally labelled OK but has been renamed to ACT on the revision
-					2 Raspberry Pi boards.
+					Pi board near the RCA and USB ports. This light was originally labelled OK but has been renamed to ACT on the Raspberry Pi 2 boards.
 				</p>
 				<div class="ucampas-toc">
 				</div>
@@ -307,29 +315,48 @@ Makefile</pre>
 					of the GPIO pin. The first 4 relate to the first 10 GPIO pins, the second 4 relate
 					to the next 10 and so on. There are 54 GPIO pins, so we need 6 sets of 4 bytes,
 					which is 24 bytes in total. Within each 4 byte section, every 3 bits relates to
-					a particular GPIO pin. Since we want the 16th GPIO pin, we need the second set of
-					4 bytes because we're dealing with pins 10-19, and we need the 6th set of 3 bits,
-					which is where the number 18 (6&times;3) comes from in the code above.</p>
+					a particular GPIO pin. Since we want the 47th GPIO pin, we need the fifth set of
+					4 bytes because we're dealing with pins 40-49, and we need the 7th set of 3 bits,
+					which is where the number 21 (6&times;3) comes from in the code above.</p>
+					<table border="1" style="width:100%">
+						<tr>
+							<th colspan="6">24 Byte GPIO Controller Addressing</th>
+						</tr>
+						<tr>
+							<th>Bytes 0-3</th>
+							<th>Bytes 4-7</th>
+							<th>Bytes 8-11</th>
+							<th>Bytes 12-15</th>
+							<th>Bytes 16-19</th>
+							<th>Bytes 20-23</th>
+						</tr>
+							<td>GPIO Pins 0-9</td>
+							<td>GPIO Pins 10-19</td>
+							<td>GPIO Pins 20-29</td>
+							<td>GPIO Pins 30-39</td>
+							<td>GPIO Pins 40-49</td>
+							<td>GPIO Pins 50-54</td>
+						</tr>
+					</table>
 				<p>
 					Finally the <span class="armCodeInline">str</span> 'store register' command stores
 					the value in the first argument, <span class="armCodeInline">r1</span> into the
 					address computed from the expression afterwards. The expression can be a register,
 					in this case <span class="armCodeInline">r0</span>, which we know to be the GPIO
 					controller address, and another value to add to it, in this case <span class="armCodeInline">
-						#4</span>. This means we add 4 to the GPIO controller address and write the
-					value in <span class="armCodeInline">r1</span> to that location. This happens to
-					be the location of the second set of 4 bytes that I mentioned before, and so we
-					send our first message to the GPIO controller, telling it to ready the 16th GPIO
+						#4</span>. This means we add 16 to the GPIO controller address, essentially 
+					adding a 16 byte offset to the GPIO base address and write the value in 
+					<span class="armCodeInline">r1</span> to that location. This happens to
+					be the location of the fifth set of 4 bytes that I mentioned before, and so we
+					send our first message to the GPIO controller, telling it to ready the 47th GPIO
 					pin for output.</p>
 				<h2 id="signlife">
 					5 A Sign Of Life</h2>
 				<p>
 					Now that the LED is ready to turn on, we need to actually turn it on. This means
-					sending a message to the GPIO controller to turn pin 16 off. Yes, <em>turn it off</em>.
-					The chip manufacturers decided it made more sense<a class="noteLink" name="note5a"
-						href="#note5" title="Note 5"><sup>[5]</sup></a> to have the LED turn on when
-					the GPIO pin is off. Hardware engineers often seem to take these sorts of decisions,
-					seemingly just to keep OS Developers on their toes. Consider yourself warned.</p>
+					sending a message to the GPIO controller to turn pin 47 on.  In the previous Raspberry
+					Pi versions we actually send the message to turn this pin off, but the hardware has
+					changed.  For a better explanation of pull-high and pull-low see the comments below.<sup>[5]<a class="noteBackLink" href="#note5a">^</a></sup></p>
 				<div class="armCodeBlock"><p>
 					mov r1,#1<br />
 					lsl r1,#15<br />
@@ -338,11 +365,41 @@ Makefile</pre>
 				<p>
 					Hopefully you should recognise all of the above commands, if not their values. The
 					first puts a 1 into <span class="armCodeInline">r1</span> as before. The second
-					shifts the binary representation of this 1 left by 16 places. Since we want to turn
-					pin 16 off, we need to have a 1 in the 16th bit of this next message (other values
-					would work for other pins). Finally we write it out to the address which is 32<sub>10</sub>
-					added to the GPIO controller address, which happens to be the address to write to
-					turn a pin off (28 would turn the pin on).</p>
+					shifts the binary representation of this 1 left by 15 places. You may be wondering, why 15?  Why don't we use 47 here.  The answer to that involves some background in addressing which we'll cover briefly here, we write to memory by writing to 4 byte registers.  As we know 4 bytes is equivalent to 32 bits which is substantially less than 47.  A 47 position left logical shift would overrun the size of the register.  There are actually two SET and two CLR registers, the first for pins 0-31 and the second for pins 32-63.  We are using the second register so we truncate the first 32 bits making the shift 47-32, or 15 bits.  We want to turn pin 47 on, which requires that we have a 1 in the 15th bit of this next message (other values would work for other pins). Finally we write it out to the GPSET1 address which is 32<sub>10</sub> added to the GPIO controller address, which happens to be the address to write to turn a pin on.  Likewise, the pin could be turned off with a similar set of instructions, but writing to the GPCLR1 register at offset 44<sub>10</sub></p>
+					<table border="1" style="width:100%">
+						<tr>
+							<th colspan="6">GPSET and GPCLEAR Registers</th>
+						</tr>
+						<tr>
+							<th>Register</th>
+							<th>Hex Offset</th>
+							<th>Decimal Offset</th>
+							<th>Respective Pins</th>
+						</tr>
+						<tr>
+							<td>GPSET0</td>
+							<td>0x1C</td>
+							<td>28</td>
+							<td>0-31</td>
+						<tr>
+							<td>GPSET1</td>
+							<td>0x20</td>
+							<td>32</td>
+							<td>32-63</td>
+						</tr>
+						<tr>
+							<td>GPCLR0</td>
+							<td>0x28</td>
+							<td>40</td>
+							<td>0-31</td>
+						</tr>
+						<tr>
+							<td>GPCLR1</td>
+							<td>0x2C</td>
+							<td>44</td>
+							<td>32-63</td>
+						</tr>
+					</table>
 				<h2 id="happy">
 					6 Happily Ever After</h2>
 				<p>
@@ -395,13 +452,15 @@ Makefile</pre>
 				</p>
 				<p>
 					To install your operating system, first of all get a Raspberry PI SD card which
-					has an operating system installed already. If you browse the files in the SD card,
-					you should see one called kernel.img. Rename this file to something else, such as
-					kernel_linux.img. Then, copy the file kernel.img that <span class="shellCodeInline">
-						make</span> generated onto the SD Card. You've just replaced the existing operating
-					system with your own. To switch back, simply delete your kernel.img file, and rename
-					the other one back to kernel.img. I find it is always helpful to keep a backup of
-					you original Raspberry Pi operating system, in case you need it again.</p>
+					has an operating system installed already.  I used Raspbian. If you browse the files in
+					the SD card, you should see one called kernel.img and another called kernel7.img. Due to
+					the CPU differences (ARM6 vs ARM7) between the Raspberry Pi 1 and 2, the kernel had to be
+					created separately.  The Raspberry Pi 2 will use the kernel7.img file so rename this file
+					to something else, such as kernel7_linux.img. Then, copy the file kernel.img that <span class="shellCodeInline">
+						make</span> generated onto the SD Card and rename it to kernel7.img. You've just 
+					replaced the existing operating	system with your own. To switch back, simply delete your 
+					kernel7.img file, and rename the other one back to kernel7.img. I find it is always helpful
+					to keep a backup of	you original Raspberry Pi operating system, in case you need it again.</p>
 				<p>
 					Put the SD card into a Raspberry Pi and turn it on. The OK LED should turn on. If
 					not please see the troubleshooting page. If so, congratulations, you just wrote
