@@ -662,9 +662,9 @@
 					rounded away when we did &divide; 32 which may not be if we just &divide; 8.</p>
 				<p>
 					The result of this is that <span class="armCodeInline">gpioAddr</span> now contains
-					either 20200000<sub>16</sub> if the pin number is 0-31, and 20200004<sub>16</sub>
-					if the pin number is 32-53. This means if we add 28<sub>10</sub> we get the address
-					for turning the pin on, and if we add 40<sub>10</sub> we get the address for turning
+					either 3f200000<sub>16</sub> if the pin number is 0-31, and 3f200004<sub>16</sub>
+					if the pin number is 32-53. This means if we add 32<sub>10</sub> we get the address
+					for turning the pin on, and if we add 44<sub>10</sub> we get the address for turning
 					the pin off. Since we are done with <span class="armCodeInline">pinBank</span>,
 					I use <span class="armCodeInline">.unreq</span> immediately afterwards.</p>
 				<p>
@@ -705,8 +705,8 @@
 				<div class="armCodeBlock"><p>
 					teq pinVal,#0<br />
 					.unreq pinVal<br />
-					streq setBit,[gpioAddr,#40]<br />
-					strne setBit,[gpioAddr,#28]<br />
+					streq setBit,[gpioAddr,#44]<br />
+					strne setBit,[gpioAddr,#32]<br />
 					.unreq setBit<br />
 					.unreq gpioAddr<br />
 					pop {pc}<br />
@@ -723,8 +723,8 @@
 				</p>
 				<p>
 					If <span class="armCodeInline">pinVal</span> is zero, we store the <span class="armCodeInline">
-						setBit</span> at 40 away from the GPIO address, which we already know turns
-					the pin off. Otherwise we store it at 28, which turns the pin on. Finally, we return
+						setBit</span> at 44 away from the GPIO address, which we already know turns
+					the pin off. Otherwise we store it at 32, which turns the pin on. Finally, we return
 					by popping the <span class="armCodeInline">pc</span>, which sets it to the value
 					that we stored when we pushed the link register.</p>
 				<h2 id="newbeginning">
