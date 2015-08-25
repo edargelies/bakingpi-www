@@ -340,7 +340,7 @@
 				<div class="armCodeBlock"><p>
 					.globl GetGpioAddress<br />
 					GetGpioAddress:<br />
-					ldr r0,=0x20200000<br />
+					ldr r0,=0x3f200000<br />
 					mov pc,lr<br />
 				</div>
 				<div class="commandBox"><p>
@@ -356,7 +356,7 @@
 					file we can branch to the label <span class="armCodeInline">GetGpioAddress</span>
 					even though it is not defined in that file.</p>
 				<p>
-					You should recognise the <span class="armCodeInline">ldr r0,=0x20200000</span> command,
+					You should recognise the <span class="armCodeInline">ldr r0,=0x3f200000</span> command,
 					which stores the GPIO controller address in r0. Since this is a function, we have
 					to give the output in r0, so we are not as free to use any register as we once were.</p>
 				<p>
@@ -386,7 +386,7 @@
 					3 A Big Function</h2>
 				<p>
 					Now we're going to implement a bigger function. Our first job was to enable output
-					on GPIO pin 16. It would be nice if this was a function. We could simply specify
+					on GPIO pin 47. It would be nice if this was a function. We could simply specify
 					a pin and a function as the input, and the function would set the function of that
 					pin to that value. That way, we could use the code to control any GPIO pin, not
 					just the LED.</p>
@@ -662,7 +662,7 @@
 					rounded away when we did &divide; 32 which may not be if we just &divide; 8.</p>
 				<p>
 					The result of this is that <span class="armCodeInline">gpioAddr</span> now contains
-					either 20200000<sub>16</sub> if the pin number is 0-31, and 20200004<sub>16</sub>
+					either 3f200000<sub>16</sub> if the pin number is 0-31, and 3f200004<sub>16</sub>
 					if the pin number is 32-53. This means if we add 28<sub>10</sub> we get the address
 					for turning the pin on, and if we add 40<sub>10</sub> we get the address for turning
 					the pin off. Since we are done with <span class="armCodeInline">pinBank</span>,
@@ -684,8 +684,8 @@
 					This next part of the function is for generating a number with the correct bit set.
 					For the GPIO controller to turn a pin on or off, we give it a number with a bit
 					set in the place of the remainder of that pin's number divided by 32. For example,
-					to set pin 16, we need a number with the 16th bit a 1. To set pin 45 we would need
-					a number with the 13th bit 1 as 45 &divide; 32 = 1 remainder 13.</p>
+					to set pin 16, we need a number with the 16th bit a 1. To set pin 47 we would need
+					a number with the 15th bit 1 as 47 &divide; 32 = 1 remainder 15.</p>
 				<p>
 					The <span class="armCodeInline">and</span> command computes the remainder we need.
 					How it does this is that the result of an and operation is a number with 1s in all
@@ -762,29 +762,29 @@
 				<div class="armCodeBlock"><p>
 					pinNum .req r0<br />
 					pinFunc .req r1<br />
-					mov pinNum,#16<br />
+					mov pinNum,#47<br />
 					mov pinFunc,#1<br />
 					bl SetGpioFunction<br />
 					.unreq pinNum<br />
 					.unreq pinFunc<br />
 				</div>
 				<p>
-					This code calls SetGpioFunction with the pin number 16 and the pin function code
+					This code calls SetGpioFunction with the pin number 47 and the pin function code
 					1. This has the effect of enabling output to the OK LED.</p>
 				<p>
 					Replace any code which turns the OK LED on with the following:</p>
 				<div class="armCodeBlock"><p>
 					pinNum .req r0<br />
 					pinVal .req r1<br />
-					mov pinNum,#16<br />
-					mov pinVal,#0<br />
+					mov pinNum,#47<br />
+					mov pinVal,#1<br />
 					bl SetGpio<br />
 					.unreq pinNum<br />
 					.unreq pinVal<br />
 				</div>
 				<p>
-					This code uses SetGpio to turn off GPIO pin 16, thus turning on the OK LED. If we
-					instead used <span class="armCodeInline">mov pinVal,#1</span>, it would turn the
+					This code uses SetGpio to turn on GPIO pin 47, thus turning on the OK LED. If we
+					instead used <span class="armCodeInline">mov pinVal,#0</span>, it would turn the
 					LED off. Replace your old code to turn the LED off with that.</p>
 				<h2 id="onwards">
 					6 Onwards</h2>
