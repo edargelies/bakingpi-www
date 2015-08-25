@@ -1,7 +1,12 @@
 Lesson 2 OK2
 
-Lesson two builds off of lesson one by introducing a new concept of waiting.  In the previous lab we added a loop to the end of the code to give the processor something to do.  This lab takes it a step further by using these empty cycles to flash an LED.  We already discovered how to turn on an LED by setting the 47th bit of GPSET by setting the 15th bit of the GPSET1 register.  In this case we load register 2 with a large value and subtract from it in a loop.  The loop continues as long as register 2 is not zero.  Upon reaching zero we turn off the LED by setting the 47th bit of the GPCLR, found in GPCLR1 bit 15.  We do the same process again to wait and turn on the LED.  This loops infinitely. The source code can be found below:
+Lesson two builds off of lesson one by introducing a new concept of waiting.  In the previous lab we added a loop to the end of the code to give the processor something to do.  This lab takes it a step further by using these empty cycles to flash an LED.  We already discovered how to turn on an LED by setting the 47th bit of GPSET by setting the 15th bit of the GPSET1 register.  In this case we load register 2 with a large value and subtract from it in a loop.  The loop continues as long as register 2 is not zero.  Upon reaching zero we turn off the LED by setting the 47th bit of the GPCLR, found in GPCLR1 bit 15.  We do the same process again to wait and turn on the LED.  This loops infinitely. 
 
+The source code can be found below:
+
+-------------------------------------------------------------------------------
+MAIN.S
+-------------------------------------------------------------------------------
 @ Initialization
 .section .init
 .globl _start

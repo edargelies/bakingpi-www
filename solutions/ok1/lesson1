@@ -4,6 +4,9 @@ This lesson focused on a few basic assembly commands with the goal of creating a
 Unfortunately, at this time a User Manual for the Raspberry Pi 2 is not readily available to determine these address locations.  Luckily, I was able to find a post on the Raspberry Pi forums by user nburman that lists the new address location and GPIO pins as well as other issues that resolve the lesson on the Raspberry Pi 2.  From this post I was able to infer that the addressing on the RPi 2 is very similar to the RPi 1.  The changes seems to be the base GPIO address as well as the GPIO pinouts which have the ACT pin at 47 rather than 16.  Looking at the Broadcom 2835 user guide I was able to deduce the proper registers for setting and clearing LEDs.  The Broadcom 2836 user guide is not available at this time.
  
 The source code is as follows:
+-------------------------------------------------------------------------------
+MAIN.S
+-------------------------------------------------------------------------------
 @ Initialization
 .section .init
 .globl _start
