@@ -1,0 +1,38 @@
+Lesson 1 OK01
+ 
+This lesson focused on a few basic assembly commands with the goal of creating a simple kernel that illuminates the ACT LED on the Raspberry Pi.  A kernel manages I/O requests from software and translates them for the CPU.  It is the bridge from software to hardware. It also involved the initial environment setup of installing the GNU compiler toolchain.  Much of the lesson needs an update for the Raspberry Pi 2 as the GPIO base address location and GPIO pins for the LEDs have changed.  
+Unfortunately, at this time a User Manual for the Raspberry Pi 2 is not readily available to determine these address locations.  Luckily, I was able to find a post on the Raspberry Pi forums by user nburman that lists the new address location and GPIO pins as well as other issues that resolve the lesson on the Raspberry Pi 2.  From this post I was able to infer that the addressing on the RPi 2 is very similar to the RPi 1.  The changes seems to be the base GPIO address as well as the GPIO pinouts which have the ACT pin at 47 rather than 16.  Looking at the Broadcom 2835 user guide I was able to deduce the proper registers for setting and clearing LEDs.  The Broadcom 2836 user guide is not available at this time.
+ 
+The source code is as follows:
+-------------------------------------------------------------------------------
+MAIN.S
+-------------------------------------------------------------------------------
+@ Initialization
+.section .init
+.globl _start
+_start:
+@ Credit to user nburman of Raspberry Pi forums who found
+@ the new base address and GPIO pin for the ACT LED of the
+@ Raspberry Pi 2.
+ 
+@ Load the address of the GPIO controller
+ldr r0,=0x3f200000
+@ enable the 47th GPIO pin
+mov r1,#1
+lsl r1,#21
+str r1,[r0,#16]
+@ Turn on the LED
+mov r1,#1
+lsl r1,#15
+str r1,[r0,#32]
+@ Give processor loop task
+loop$:
+b loop$
+ 
+The first initialization instructions tell the assembly to run this code first.  When this code is compiled into a kernel image the Raspberry Pi will look here first for instructions.
+ 
+The first instruction loads the base address of the GPIO controller into register 0.  Then, the next three instructions enable the 47th GPIO pin for the ACT LED.  Move the number 1 into register 1 and executing a logical left shift 21 places.  Finally, we store the result of that shift into the address, which happens to be the GPIO base address plus the number 16.
+ 
+Finally, to turn the LED register on I must write to the GPSET register to turn on pin 47.  Again, this is done by writing a 1 to the register, logically shifting, then writing to an address offset to the GPIO controller base address, the GPSET1 register.  The final instruction keeps the CPU busy in an infinite loop.  If this is not inserted the Raspberry Pi will crash.
+ 
+The last step was to load the new kernel on the RPi 2.  First I loaded a Raspian OS onto the SD card.  Next, I replaced the kernel7.img file with the kernel that I created from my source code.  Raspian comes with two kernels, one for the ARM6 (kernel.img) and another for the ARM7 (kernel7.img).  Since the kernel is a very low level piece of software the hardware determines which kernel to load, in the case of the RPi 2 it’s the kernel7 image.  After loading the new kernel I powered on the RPi 2 and confirmed the green ACT LED stayed illuminated.
