@@ -1,0 +1,201 @@
+Lesson 5 OK 5
+
+Lesson 5 builds off the previous lessons, this time added the ability to store data.  Previous lessons only used instructions.  The lesson explains that although we know data in certain formats such as files, all it boils down to is binary sequences that should be interpretted.  We used data in this lesson to store a binary sequence to control our LED.  Our LED looks for a one or zero value to determine whether to illuminate or turn-off the LED.  Therefore if we create a sequence of 1's and 0's we can instruct our LED to illiminate in a patter, in this case morse code for S-O-S.  The implementation requires storing the pattern into the output which we can store in a register.  Inside the loop we keep track of a sequence counter, to know which position in the sequence we are.  Each iteration we shift a one to the sequence number's index and "and" it with the value found in the sequence.  The result will be a one if the sequence has a one at that position or a zero if the sequence has a zero at that position.  We then use this value to store to the LED register with a zero turning off the LED and a one turning it on.  Finally, we increment the sequence number.  After the sequence number has reached 32, the size of the sequence, it must be reset to zero.  I completed this with the following naive implementation:
+
+add seq,seq,#1
+cmp seq,#32
+moveq seq,#0
+
+Basically just adding one to the sequence and then comparing it with the value 32.  This could also be done more cleverly with one instruction:
+
+add seq,#1
+and seq,#0b11111
+
+This essentially is creating a mask to clear all the bits when the value 32 is encountered.  The binary number 32 is 0b100000.  Stacking this value on top of the mask,
+
+0b100000
+AND
+0b011111
+EQUALS
+0b000000
+
+it becomes very clear that all values under 32 won't be affected by this operation; however the value 32 in particular will cause the value to reset to all zero's. 
+
+This lesson was fairly straightforward with minimal changes necessary.  The Pi this curriculum was created for turns the LED on with a zero value and off with a one value.  Due to the fact that the Raspberry Pi 2 turns on the LED with a 1 value and turns off with a 0 value the bits in the sequence had to be flipped.  This was the only change required in the html.
+
+The source code can be found below:
+-------------------------------------------------------------------------------
+MAIN.S
+-------------------------------------------------------------------------------
+@ Initialization
+.section .init
+.globl _start
+_start:
+b main
+
+.section .text
+main:
+mov sp,#0x8000
+
+@ Credit to user nburman of Raspberry Pi forums who found
+@ the new base address and GPIO pin for the ACT LED of the
+@ Raspberry Pi 2.
+
+@ Set the GPIO pin
+pinNum .req r0
+pinFunc .req r1
+@ Put 47 in the for the pin number
+mov pinNum,#47
+@ We want to set the pin high, function 1
+mov pinFunc,#1
+bl SetGpioFunction
+.unreq pinNum
+.unreq pinFunc
+
+ptrn .req r4
+ldr ptrn,=pattern
+ldr ptrn,[ptrn]
+seq .req r5
+reset .req r6
+mov seq,#0
+
+@ Turn on the LED by setting the GPSET1 register
+@ With the 47th bit set
+@ Give processor a flash LED task
+loop$:
+
+pinNum .req r0
+pinVal .req r1
+mov pinVal,#1
+lsl pinVal,seq
+and pinVal,ptrn
+mov pinNum,#47
+bl SetGpio
+.unreq pinNum
+.unreq pinVal
+
+@ Set the countdown timer
+delay .req r0
+ldr delay,=250000
+bl Wait
+.unreq delay
+
+add seq,seq,#1
+cmp seq,#32
+moveq seq,#0
+@ When timer expires turn on the LED by setting the GPSET1 register
+b loop$
+
+.unreq seq
+
+.section .data
+.align 2
+pattern:
+.int 0b00000000010101011101110111010101
+
+-------------------------------------------------------------------------------
+GPIO.S
+-------------------------------------------------------------------------------
+.globl GetGpioAddress
+GetGpioAddress:
+ldr r0,=0x3f200000
+mov pc,lr
+
+.globl SetGpioFunction
+SetGpioFunction:
+    @ Make sure pin number and function are valid
+    cmp r0,#53
+    cmpls r1,#7
+    @ If invalid return back to the code that called
+    movhi pc,lr
+
+    @ Store the link register, the address to return to, in the stack
+    push {lr}
+    @ Put the pin number into r2
+    mov r2,r0
+
+    bl GetGpioAddress
+    functionLoop$:
+        cmp r2,#9
+        subhi r2,#10
+        addhi r0,#4
+        bhi functionLoop$
+
+    add r2, r2,lsl #1
+    lsl r1,r2
+    str r1,[r0]
+    pop {pc}
+
+.globl SetGpio
+SetGpio:
+    pinNum .req r0
+    pinVal .req r1
+
+    cmp pinNum,#53
+    movhi pc,lr
+    push {lr}
+    mov r2,pinNum
+    .unreq pinNum
+    pinNum .req r2
+    bl GetGpioAddress
+    gpioAddr .req r0
+
+    pinBank .req r3
+    lsr pinBank,pinNum,#5
+    lsl pinBank,#2
+    add gpioAddr,pinBank
+    .unreq pinBank
+
+    and pinNum,#31
+    setBit .req r3
+    mov setBit,#1
+    lsl setBit,pinNum
+    .unreq pinNum
+
+    teq pinVal,#0
+    .unreq pinVal
+    streq setBit,[gpioAddr,#40]
+    strne setBit,[gpioAddr,#28]
+    .unreq setBit
+    .unreq gpioAddr
+    pop {pc}
+
+-------------------------------------------------------------------------------
+SYSTEMTIMER.S
+-------------------------------------------------------------------------------
+.globl GetSystemTimerAddress
+GetSystemTimerAddress: 
+	ldr r0,=0x3F003000
+	mov pc,lr
+
+.globl GetTimestamp
+GetTimestamp:
+	push {lr}
+	bl GetSystemTimerAddress
+	@ Get current the counter value
+	ldrd r0,r1,[r0,#4]
+	pop {pc}
+
+.globl Wait
+Wait:
+	start .req r3
+	period .req r2
+	push {lr}
+	mov period,r0
+	bl GetTimestamp
+	@ Start time in r3 (start), delay period in r2 (period)
+	mov start,r0
+
+	loop$:
+		bl GetTimestamp
+		elapsed .req r1
+		@ Subtract start time from most recent timestamp to get elapsed time
+		sub elapsed,r0,start
+		cmp elapsed,period
+		.unreq elapsed
+		@ If elapsed time is less than wait period loop again
+		bls loop$
+	@ Elapsed time is greater than wait period so return	
+	.unreq period
+	.unreq start
+	pop {pc}

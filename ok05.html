@@ -46,7 +46,7 @@
 						.section .data<br />
 						.align 2<br />
 						pattern:<br />
-						.int 0b11111111101010100010001000101010<br />
+						.int 0b00000000010101011101110111010101<br />
 				</div>
 				<div class="commandBox">
 					<p>
@@ -75,7 +75,7 @@
 					4.</p>
 				<p>
 					The <span class="armCodeInline">.int</span> command copies the constant after it
-					into the output directly. That means that 11111111101010100010001000101010<sub>2</sub>
+					into the output directly. That means that 00000000010101011101110111010101<sub>2</sub>
 					will be placed into the output, and so the label pattern actually labels this piece
 					of data as pattern.</p>
 				<div class="informationBox">
@@ -119,8 +119,8 @@
 						and r1,ptrn<br />
 				</div>
 				<p>
-					This code is useful for your calls to SetGpio, which must have a non-zero value
-					to turn the LED off, and a value of zero to turn the LED on.</p>
+					This code is useful for your calls to SetGpio, which must have a zero value
+					to turn the LED off, and a non-zero value to turn the LED on.</p>
 				<p>
 					Now modify all of your code in 'main.s' so that each loop the code sets the LED
 					based on the current sequence number, waits for 250000 micro seconds (or any other
