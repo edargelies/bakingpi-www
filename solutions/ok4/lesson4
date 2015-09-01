@@ -1,0 +1,177 @@
+Lesson 4 OK 4
+
+Lesson 4 again builds off the previous lesson by creating a function for the wait between turning on and off the LED.  This requires interaction with another piece of hardware, the system timer.  Unfortunately, the address of this timer changed on the Raspberry Pi 2 so I looked into the peripheral guide for the BCM2836, but the system timer was unlisted.  I finally discovered the address by using the same offset for the GPIO base address.  Knowing the GPIO base address for the BCM2835 and BCM2836 I determined the offset and added it to the system timer address for the BCM2835.  Luckily the offset appears constant and I was able to access the timer.  The only lesson change I had to make here was to update the address for the system timer.
+According the the course material, the timer increments the register every micro second. With this knowledge I created a comparison loop in my function.  First I check the current time, then I enter a loop checking the value of the current time minus the start time.  As soon as the different between the current time and the start time is greater than the given elapsed time I return from the function.  I then update the main.s program to use my new wait function.  The only new command I use in this lesson is the ldrd.  This command uses two registers to load 8 bytes of memory.  This is useful because a register can only hold 4 bytes and the counter value totals 8 bytes.
+
+
+The source code can be found below:
+-------------------------------------------------------------------------------
+MAIN.S
+-------------------------------------------------------------------------------
+@ Initialization
+.section .init
+.globl _start
+_start:
+b main
+
+.section .text
+main:
+mov sp,#0x8000
+
+@ Credit to user nburman of Raspberry Pi forums who found
+@ the new base address and GPIO pin for the ACT LED of the
+@ Raspberry Pi 2.
+
+@ Set the GPIO pin
+pinNum .req r0
+pinFunc .req r1
+@ Put 47 in the for the pin number
+mov pinNum,#47
+@ We want to set the pin high, function 1
+mov pinFunc,#1
+bl SetGpioFunction
+.unreq pinNum
+.unreq pinFunc
+
+@ Turn on the LED by setting the GPSET1 register
+@ With the 47th bit set
+@ Give processor a flash LED task
+loop$:
+pinNum .req r0
+pinVal .req r1
+mov pinNum,#47
+mov pinVal,#1
+bl SetGpio
+.unreq pinNum
+.unreq pinVal
+
+@ Set the countdown timer
+delay .req r0
+ldr delay,=100000
+bl Wait
+.unreq delay
+
+@ When timer expires turn off the LED by setting GPCLR1 register
+pinNum .req r0
+pinVal .req r1
+mov pinNum,#47
+mov pinVal,#0
+bl SetGpio
+.unreq pinNum
+.unreq pinVal
+
+@ Reset the countdown timer
+delay .req r0
+ldr delay,=100000
+bl Wait
+.unreq delay
+
+@ When timer expires turn on the LED by setting the GPSET1 register
+b loop$
+
+-------------------------------------------------------------------------------
+GPIO.S
+-------------------------------------------------------------------------------
+.globl GetGpioAddress
+GetGpioAddress:
+ldr r0,=0x3f200000
+mov pc,lr
+
+.globl SetGpioFunction
+SetGpioFunction:
+    @ Make sure pin number and function are valid
+    cmp r0,#53
+    cmpls r1,#7
+    @ If invalid return back to the code that called
+    movhi pc,lr
+
+    @ Store the link register, the address to return to, in the stack
+    push {lr}
+    @ Put the pin number into r2
+    mov r2,r0
+
+    bl GetGpioAddress
+    functionLoop$:
+        cmp r2,#9
+        subhi r2,#10
+        addhi r0,#4
+        bhi functionLoop$
+
+    add r2, r2,lsl #1
+    lsl r1,r2
+    str r1,[r0]
+    pop {pc}
+
+.globl SetGpio
+SetGpio:
+    pinNum .req r0
+    pinVal .req r1
+
+    cmp pinNum,#53
+    movhi pc,lr
+    push {lr}
+    mov r2,pinNum
+    .unreq pinNum
+    pinNum .req r2
+    bl GetGpioAddress
+    gpioAddr .req r0
+
+    pinBank .req r3
+    lsr pinBank,pinNum,#5
+    lsl pinBank,#2
+    add gpioAddr,pinBank
+    .unreq pinBank
+
+    and pinNum,#31
+    setBit .req r3
+    mov setBit,#1
+    lsl setBit,pinNum
+    .unreq pinNum
+
+    teq pinVal,#0
+    .unreq pinVal
+    streq setBit,[gpioAddr,#40]
+    strne setBit,[gpioAddr,#28]
+    .unreq setBit
+    .unreq gpioAddr
+    pop {pc}
+
+-------------------------------------------------------------------------------
+SYSTEMTIMER.S
+-------------------------------------------------------------------------------
+.globl GetSystemTimerAddress
+GetSystemTimerAddress: 
+	ldr r0,=0x3F003000
+	mov pc,lr
+
+.globl GetTimestamp
+GetTimestamp:
+	push {lr}
+	bl GetSystemTimerAddress
+	@ Get current the counter value
+	ldrd r0,r1,[r0,#4]
+	pop {pc}
+
+.globl Wait
+Wait:
+	start .req r3
+	period .req r2
+	push {lr}
+	mov period,r0
+	bl GetTimestamp
+	@ Start time in r3 (start), delay period in r2 (period)
+	mov start,r0
+
+	loop$:
+		bl GetTimestamp
+		elapsed .req r1
+		@ Subtract start time from most recent timestamp to get elapsed time
+		sub elapsed,r0,start
+		cmp elapsed,period
+		.unreq elapsed
+		@ If elapsed time is less than wait period loop again
+		bls loop$
+	@ Elapsed time is greater than wait period so return	
+	.unreq period
+	.unreq start
+	pop {pc}
