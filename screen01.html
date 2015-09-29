@@ -260,7 +260,7 @@
 					<tbody>
 						<tr>
 							<td>
-								2000B880
+								3F00B880
 							</td>
 							<td>
 								4
@@ -277,7 +277,7 @@
 						</tr>
 						<tr>
 							<td>
-								2000B890
+								3F00B890
 							</td>
 							<td>
 								4
@@ -294,7 +294,7 @@
 						</tr>
 						<tr>
 							<td>
-								2000B894
+								3F00B894
 							</td>
 							<td>
 								4
@@ -311,7 +311,7 @@
 						</tr>
 						<tr>
 							<td>
-								2000B898
+								3F00B898
 							</td>
 							<td>
 								4
@@ -328,7 +328,7 @@
 						</tr>
 						<tr>
 							<td>
-								2000B89C
+								3F00B89C
 							</td>
 							<td>
 								4
@@ -345,7 +345,7 @@
 						</tr>
 						<tr>
 							<td>
-								2000B8A0
+								3F00B8A0
 							</td>
 							<td>
 								4
@@ -386,7 +386,7 @@
 				<div class="armCodeBlock"><p>
 					.globl GetMailboxBase<br />
 					GetMailboxBase:<br />
-					ldr r0,=0x2000B880<br />
+					ldr r0,=0x3F00B880<br />
 					mov pc,lr<br />
 				</p></div>
 				<p>
@@ -595,7 +595,7 @@
 					section. In a file called 'framebuffer.s' place the following code:</p>
 				<div class="armCodeBlock"><p>
 					.section .data<br />
-					.align 4<br />
+					.align 12<br />
 					.globl FrameBufferInfo
 					<br />
 					FrameBufferInfo:<br />
@@ -805,12 +805,16 @@
 					pointer from it, and start drawing to the screen. We will do this using two loops,
 					one going down the rows, and one going along the columns. On the Raspberry Pi, indeed
 					in most applications, pictures are stored left to right then top to bottom, so we
-					have to do the loops in the order I have said.</p>
+					have to do the loops in the order I have said. You'll also notice that we subtract
+					0xC0000000 from the GPU pointer to the framebuffer before proceeding.  This was not
+					required on previous versions of the Raspberry Pi, but the Raspberry Pi 2 now uses
+					uncached bus access for DMA so we must now subtract the cached alias offset.</p>
 				<div class="armCodeBlock"><p>
 					render$:<br />
 					<div class="indent"><p>
 						fbAddr .req r3<br />
 						ldr fbAddr,[fbInfoAddr,#32]<br />
+						sub fbAddr, #0xC0000000<br />
 						<br />
 						colour .req r0<br />
 						y .req r1<br />
