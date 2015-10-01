@@ -630,11 +630,10 @@
 						The GPU expects the message to be 16 byte aligned.</p>
 				</div>
 				<p>
-					I was very careful to include a <span class="armCodeInline">.align 4</span> here.
-					As discussed before, this ensures the lowest 4 bits of the address of the next line
-					are 0. Thus, we know for sure that FrameBufferInfo will be placed at an address
-					we can send to the graphics processor, as our mailbox only sends values with the
-					low 4 bits all 0.
+					I was very careful to include a <span class="armCodeInline">.align 12</span> here.
+					The .align 12 is necessary to ensure correct communication with the GPU, which expects 
+					page alignment. Thus, we know for sure that FrameBufferInfo will be placed at an address
+					we can send to the graphics processor.
 				</p>
 				<p>
 					So, now that we have our message, we can write code to send it. The communication
