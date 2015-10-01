@@ -1,0 +1,307 @@
+Lesson 6 SCREEN01
+ 
+This lesson was the first to discuss displaying output to the screen.  The display of a computer is essentially a grid of colored squares called pixels.  The range of colors these pixels can be is determined by the number of bits are used to represent each pixel.  The simplest color palette is monochrome which uses one bit to represent either black or white.  Greyscale uses a full bye to represent the range from black who's value is 0 to white who's value is 255.  Moving onto colored palates the bits represent the prescene of 3 color channels: red, green, and blue.  The colored palette quality ranges from 8 color which uses 2-3 bits for each channel to true color which uses 8 bits per channel.  Using more bits allows for a more granular range and thus truer colors.  As we can see the display is not too complicated, but getting the information to display it takes a bit of effort.
+
+The Raspberry Pi consists of a GPU and and ARM CPU which are independent of each other, but must communicate.  These two processors communicate through mailbox interface.  The mailbox is nothing more than a set of registers that both the GPU and CPU can access.  The idea is to write a message to memory and then pass the address to the message to the GPU via the mailbox. Then the GPU must read the message from the mailbox, populate the required fields, and send a response.
+
+There are a few steps to writing to the mailbox.
+
+1. Read the status register and check if the 31st bit is a zero.  This means we are ready to write.
+2. The most significant 28 bits contain the value to write, the least significant 4 bits contain the mailbox channel to write to.  Add these together to create the 32 bit message to send and store it in the write mailbox.
+
+Reading is done in a similar manner
+
+1. Read the status register and check if the 30th bit is a zero.  This means we are ready to read.
+2. Load the message from the write mailbox and validate the channel is what is expected.  The value is contained in the upper 28 bits.
+
+We use this method to pass the address to a buffer between the CPU an GPU.   This buffer is an array of unsigned 32 bit integers.  Each index effects some part of the display for example, width, height, bit depth, etc...  We initialize this buffer with our values and send the address of it to the GPU.  The GPU then modifies the buffer, filling the the pointer the the framebuffer.  The framebuffer is used directly modify the display by writing color values to the framebuffer's registers.
+
+There were some changes to the way the Raspberry Pi and Pi 2 handle this code.  The first change was the peripheral address.  Again, I had to update the address from 0x2000B880 to 0x3F00B880.  A non-obvious change was made for the GPU address to the framebuffer.  Apparently, in the original Pi this was a "cached" bus address that included an offset of 0xC0000000.  The Raspberry Pi 2 now uses uncached bus access so this offset is no longer required.  Unfortunately, it seems to already be baked into the framebuffer address that the GPU returns so the offset must be subtracted from the GPU framebuffer address before modifying.  The documentation on this concept is scattered at best and most of this was found on various bare metal forums.  This lesson was quite frustrating with the documentation available.  I find it very strange how little documentation is available for bare metal developers on the Raspberry Pi with it's seemingly educational motive.
+
+The source code is as follows:
+-------------------------------------------------------------------------------
+MAIN.S
+-------------------------------------------------------------------------------
+@ Initialization
+.section .init
+.globl _start
+_start:
+b main
+
+.section .text
+main:
+mov sp,#0x8000
+
+	@ Initialize the framebuffer
+	mov r0,#1024
+	mov r1,#768
+	mov r2,#16
+	bl InitialiseFrameBuffer
+
+	teq r0,#0
+	bne noError$
+	
+	@ Signal for a failed initialization	
+	mov r0,#47
+	mov r1,#1
+	bl SetGpioFunction
+
+	mov r0,#47
+	mov r1,#1
+	bl SetGpio
+
+	error$:
+		b error$
+
+	noError$:
+
+	fbInfoAddr .req r4
+	mov fbInfoAddr,r0
+
+@ Draw pixels in incremental colors on the screen
+render$:
+	fbAddr .req r3
+	@ Load the pointer to the frame buffer
+	ldr fbAddr,[fbInfoAddr,#32]
+	@ BCM2836 now uses uncached bus access for DMA subtract the cached alias offset
+	sub fbAddr, #0xC0000000
+
+@ Loop line by line to change gradient
+	colour .req r0
+	y .req r1
+	mov y,#768
+	drawRow$:
+		x .req r2
+		mov x,#1024
+		drawPixel$:
+			strh colour,[fbAddr]
+			add fbAddr,#2
+			sub x,#1
+			teq x,#0
+			bne drawPixel$
+
+		sub y,#1
+		add colour,#1
+		teq y,#0
+		bne drawRow$
+
+	b render$
+
+	.unreq fbAddr
+	.unreq fbInfoAddr
+-------------------------------------------------------------------------------
+FRAMEBUFFER.S
+-------------------------------------------------------------------------------
+.section .data
+.align 12
+.globl FrameBufferInfo 
+FrameBufferInfo:
+	.int 1024	/* #0 Width */
+	.int 768	/* #4 Height */
+	.int 1024	/* #8 vWidth */
+	.int 768	/* #12 vHeight */
+	.int 0		/* #16 GPU - Pitch */
+	.int 16		/* #20 Bit Depth */
+	.int 0		/* #24 X */
+	.int 0		/* #28 Y */
+	.int 0		/* #32 GPU - Pointer */
+	.int 0		/* #36 GPU - Size */
+
+.section .text
+.globl InitialiseFrameBuffer
+InitialiseFrameBuffer:
+	width .req r0
+	height .req r1
+	bitDepth .req r2
+	cmp width,#4096
+	cmpls height,#4096
+	cmpls bitDepth,#32
+	result .req r0
+	@ If any inputs are out of bounds move 0 into result and exit
+	movhi result,#0
+	movhi pc,lr
+
+	push {r4,lr}	
+	fbInfoAddr .req r4		
+	ldr fbInfoAddr,=FrameBufferInfo
+	@ Set width and height
+	str width,[r4,#0]
+	str height,[r4,#4]
+	@ Virtual width and height
+	str width,[r4,#8]
+	str height,[r4,#12]
+	str bitDepth,[r4,#20]
+	.unreq width
+	.unreq height
+	.unreq bitDepth
+
+	mov r0,fbInfoAddr
+	@ Address must be physical address rather than virtual with L2 cache enabled
+	add r0,#0x40000000
+	mov r1,#1
+	bl MailboxWrite
+	
+	mov r0,#1
+	bl MailboxRead
+		
+	teq result,#0
+	movne result,#0
+	popne {r4,pc}
+
+	mov result,fbInfoAddr
+	pop {r4,pc}
+	.unreq result
+	.unreq fbInfoAddr
+
+-------------------------------------------------------------------------------
+GPIO.S
+-------------------------------------------------------------------------------
+.globl GetGpioAddress
+GetGpioAddress:
+ldr r0,=0x3f200000
+mov pc,lr
+
+.globl SetGpioFunction
+SetGpioFunction:
+    @ Make sure pin number and function are valid
+    cmp r0,#53
+    cmpls r1,#7
+    @ If invalid return back to the code that called
+    movhi pc,lr
+
+    @ Store the link register, the address to return to, in the stack
+    push {lr}
+    @ Put the pin number into r2
+    mov r2,r0
+
+    bl GetGpioAddress
+    functionLoop$:
+        cmp r2,#9
+        subhi r2,#10
+        addhi r0,#4
+        bhi functionLoop$
+
+    add r2, r2,lsl #1
+    lsl r1,r2
+    str r1,[r0]
+    pop {pc}
+
+.globl SetGpio
+SetGpio:
+    pinNum .req r0
+    pinVal .req r1
+
+    cmp pinNum,#53
+    movhi pc,lr
+    push {lr}
+    mov r2,pinNum
+    .unreq pinNum
+    pinNum .req r2
+    bl GetGpioAddress
+    gpioAddr .req r0
+
+    pinBank .req r3
+    lsr pinBank,pinNum,#5
+    lsl pinBank,#2
+    add gpioAddr,pinBank
+    .unreq pinBank
+
+    and pinNum,#31
+    setBit .req r3
+    mov setBit,#1
+    lsl setBit,pinNum
+    .unreq pinNum
+
+    teq pinVal,#0
+    .unreq pinVal
+    streq setBit,[gpioAddr,#40]
+    strne setBit,[gpioAddr,#28]
+    .unreq setBit
+    .unreq gpioAddr
+    pop {pc}
+
+-------------------------------------------------------------------------------
+MAILBOX.S
+-------------------------------------------------------------------------------
+.globl GetMailboxBase
+GetMailboxBase: 
+	ldr r0,=0x3F00B880
+	mov pc,lr
+
+.globl MailboxWrite
+MailboxWrite: 
+	@ Validate the lower 4 bits of the mailbox channel are 0
+	tst r0,#0b1111
+	movne pc,lr
+	@ r1 is a mailbox channel which must be less than 4 bits
+	cmp r1,#15
+	movhi pc,lr
+
+	channel .req r1
+	value .req r2
+	mov value,r0
+	push {lr}
+	bl GetMailboxBase
+	mailbox .req r0
+		
+	status .req r3
+	wait1$:	
+		@ Status contains the address of the status register
+		@ Address 0x3F00B898 is the status mailbox
+		ldr status,[mailbox,#0x18]	
+		@ Check that bit 31 is clear (ready to write), if so proceed
+		tst status,#0x80000000
+		bne wait1$
+	.unreq status
+
+	@ Add the value and channel together, now the last 4 bits are filled with the channel
+	add value,channel
+	.unreq channel
+	
+	@ Address 0x3F0B8AC is the write mailbox
+	str value,[mailbox,#0x20]
+	.unreq value
+	.unreq mailbox
+	pop {pc}
+
+.globl MailboxRead
+MailboxRead: 
+	@ r1 is a mailbox channel which must be less than 4 bits
+	cmp r0,#15
+	movhi pc,lr
+
+	channel .req r1
+	mov channel,r0
+	push {lr}
+	bl GetMailboxBase
+	mailbox .req r0
+	
+	status .req r2
+	rightmail$:
+		wait2$:	
+			@ Status contains the address of the status register
+			@ Address 0x3F00B898 is the status mailbox
+			ldr status,[mailbox,#0x18]		
+			@ Check that bit 30 is clear (ready to read), if so proceed
+			tst status,#0x40000000
+			bne wait2$
+		.unreq status
+		
+		
+		mail .req r2
+		@ Address 0x3F00B880 is the read mailbox
+		ldr mail,[mailbox,#0]
+
+		inchan .req r3
+		@ The least significant 4 bits are the mailbox channel
+		and inchan,mail,#0b1111
+		@ Check that it's the channel we expect
+		teq inchan,channel
+		.unreq inchan
+		bne rightmail$
+	.unreq mailbox
+	.unreq channel
+
+	and r0,mail,#0xfffffff0
+	.unreq mail
+	pop {pc}
