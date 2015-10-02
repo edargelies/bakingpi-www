@@ -376,6 +376,18 @@
 					</div><p>
 					<span class="keyword">end if</span><br />
 					<br />
+					<span class="keyword">if </span>y1 &gt; y0 <span class="keyword">then</span>
+					<div class="indent"><p>
+						<span class="keyword">set </span>deltay <span class="keyword">to </span>y1 - y0<br />
+						<span class="keyword">set </span>stepy <span class="keyword">to </span>+1<br />
+					</div><p>
+					<span class="keyword">otherwise</span><br />
+					<div class="indent"><p>
+						<span class="keyword">set </span>deltay <span class="keyword">to </span>y0 - y1<br />
+						<span class="keyword">set </span>stepy <span class="keyword">to </span>-1<br />
+					</div><p>
+					<span class="keyword">end if</span><br />
+					<br />
 					<span class="keyword">set </span>error <span class="keyword">to </span>deltax -
 					deltay<br />
 					<span class="keyword">until </span>x0 = x1 + stepx <span class="keyword">or </span>
