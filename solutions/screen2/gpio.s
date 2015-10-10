@@ -1,6 +1,6 @@
 .globl GetGpioAddress
 GetGpioAddress:
-ldr r0,=0x3f200000
+ldr r0,=0x3F200000
 mov pc,lr
 
 .globl SetGpioFunction

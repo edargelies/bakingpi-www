@@ -6,7 +6,7 @@ b main
 
 .section .text
 main:
-mov sp,#0x8000
+	mov sp,#0x8000
 
 	@ Initialize the framebuffer
 	mov r0,#1024
@@ -34,34 +34,55 @@ mov sp,#0x8000
 	fbInfoAddr .req r4
 	mov fbInfoAddr,r0
 
-@ Draw pixels in incremental colors on the screen
-render$:
-	fbAddr .req r3
-	@ Load the pointer to the frame buffer
-	ldr fbAddr,[fbInfoAddr,#32]
-	@ BCM2836 now uses uncached bus access for DMA subtract the cached alias offset
-	sub fbAddr, #0xC0000000
+@ Draw Random lines
+	bl SetGraphicsAddress
+	lastRandom .req r5
+	color .req r6
+	lastx .req r7
+	lasty .req r8
+	nextx .req r9
+	nexty .req r10
 
-@ Loop line by line to change gradient
-	colour .req r0
-	y .req r1
-	mov y,#768
-	drawRow$:
-		x .req r2
-		mov x,#1024
-		drawPixel$:
-			strh colour,[fbAddr]
-			add fbAddr,#2
-			sub x,#1
-			teq x,#0
-			bne drawPixel$
+	mov lastRandom,#0
+	mov color,#0
+	mov lastx,#0
+	mov lasty,#0
+draw$:
+	mov r0,lastRandom
+	bl Random
+	mov nextx,r0
+	bl Random
+	mov nexty,r0
+	mov lastRandom,r0
 
-		sub y,#1
-		add colour,#1
-		teq y,#0
-		bne drawRow$
+	mov r0,color
+	add color,#1
+	lsl color,#16
+	lsr color,#16
+	bl SetForeColour
 
-	b render$
+	mov r0,lastx
+	mov r1,lasty
+	lsr r2,nextx,#22
+	lsr r3,nexty,#22
 
-	.unreq fbAddr
-	.unreq fbInfoAddr
+	cmp r3,#768
+	bhs draw$
+
+	mov lastx,r2
+	mov lasty,r3
+
+	bl DrawLine
+
+	b draw$
+
+	.unreq lastRandom
+	.unreq color
+	.unreq lastx
+	.unreq lasty
+	.unreq nextx
+	.unreq nexty
+	
+
+
+
