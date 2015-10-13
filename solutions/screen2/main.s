@@ -6,7 +6,7 @@ b main
 
 .section .text
 main:
-	mov sp,#0x8000
+	mov sp,#0x9000
 
 	@ Initialize the framebuffer
 	mov r0,#1024
@@ -82,7 +82,3 @@ draw$:
 	.unreq lasty
 	.unreq nextx
 	.unreq nexty
-	
-
-
-

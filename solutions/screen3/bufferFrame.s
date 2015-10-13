@@ -1,6 +1,5 @@
 .section .data
-.align 8
-.globl FrameBufferInfo 
+.align 4
 FrameBufferInfo:
 	.int 1024	/* #0 Width */
 	.int 768	/* #4 Height */

@@ -1,5 +1,5 @@
 .section .data
-.align 12
+.align 8
 .globl FrameBufferInfo 
 FrameBufferInfo:
 	.int 1024	/* #0 Width */
@@ -29,7 +29,7 @@ InitialiseFrameBuffer:
 
 	push {r4,lr}	
 	fbInfoAddr .req r4		
-	ldr fbInfoAddr,=FrameBufferInfo
+	ldr fbInfoAddr,=FrameBufferInfo+0x40000000
 	@ Set width and height
 	str width,[r4,#0]
 	str height,[r4,#4]
@@ -43,7 +43,7 @@ InitialiseFrameBuffer:
 
 	mov r0,fbInfoAddr
 	@ Address must be physical address rather than virtual with L2 cache enabled
-	add r0,#0x40000000
+	@add r0,#0x40000000
 	mov r1,#1
 	bl MailboxWrite
 	
@@ -55,6 +55,7 @@ InitialiseFrameBuffer:
 	popne {r4,pc}
 
 	mov result,fbInfoAddr
+	and result,result,#0x0FFFFFFF
 	pop {r4,pc}
 	.unreq result
 	.unreq fbInfoAddr

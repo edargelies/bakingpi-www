@@ -1,0 +1,109 @@
+SCREEN03
+
+In lesson 8, screen03, we learn about characters and writing strings.  In memory, text characters are stored as numbers
+//TO-DO Discussion
+
+I spent two whole days trying to figure out an issue that wasn't allowing me to complete this lesson.  I gained some valueable debugging experience and even created a function to flash error codes via the LED.  It seems that I'm not the first person to face this challenge.  Many people got stuck in this lesson on even the early versions of the raspberry pi.  The issue lies in the include binary declaration. This declaration eats up a rather large chunk of memory in the data section.  Looking at the memory maps before and after adding this code we can see that the framebufferinfo address is the first data in the data section.  After the lesson the font.bin file takes up this space moving the framebufferinfo deeper into memory.  According the the course's creator, Alex Chadwick, there is an issue that makes this new location is unacceptable for use as the framebufferinfo address.  Alex states he does not know what areas of memory this affects.  It's seemingly a guess and check problem. After many failed attempts and hours of debugging I finally got something working.  The only way I could get it to work is by limiting the size of the font.bin file to only a few characters.  This made sense because this effectively changes the address location of the framebufferinfo.  At the end of the day I was able to print a single character to the screen. Success! Soon after I found I could explicitly state where the framebufferinfo structure would go through modifications of the kernel.ld linker file and make file. I placed the framebufferinfo structure at the first position at address 0x9000 and let the font.bin data fall in behind it.  Then after twiddling with the alignment and order of the data statements I was able to actually fit the entire font.bin file without the framebuffer crashing.  Finally, I attempted the full solution and was able to print the commandline.  My theory is the framebufferinfo structure must exist in a specific place in memory in which both the GPU and CPU can access it.  Adding the font.bin data moved the address and made inaccessible.  I'm still looking into a definite answer on this, but with limited documentation it may be hard to find. I posted my findings to the Raspberry Pi baremetal forum.  They can be found below:
+
+Reviving this thread with some information for the Raspberry Pi 2.  I bought a Raspberry Pi 2 a few months ago and wanted to complete Alex's Baking Pi on it.  I've forked the repository and have been making updates to each lesson.  I hope people with the RPi 2 can use it as a resource, you can follow my progress here: [url]https://github.com/edargelies/bakingpi-www[/url].  Up until this point I've only really had to deal with changing some peripheral addresses or adjusting address offsets.  I ran into the exact same issue and was stuck for a few days. Finally did some proper debugging with the LEDs to figure out what was going on.  Merely adding the incbin in the drawing.s file broke everything, I don't even need to implement the DrawCharacter or DrawString functions.  Looking at the memory map it isn't immediately apparent why.  Before and after adding the incbin code I noticed the address of the framebufferinfo increases by 0x900 which seemingly is enough to make it unacceptable as Alex said.  First I tried messing with the sections in the linker file and ended up with this:
+
+kernel.ld
+[code]
+/******************************************************************************
+*	kernel.ld
+*	 by Alex Chadwick
+*
+*	A linker script for generation of raspberry pi kernel images.
+******************************************************************************/
+
+SECTIONS {
+	/*
+	* First and formost we need the .init section, containing the code to 
+        * be run first. We allow room for the ATAGs and stack and conform to 
+        * the bootloader's expectation by putting this code at 0x8000.
+	*/
+	.init 0x8000 : {
+		*(.init)
+	}
+	
+	/* 
+	* Next we put the data.
+	*/
+	.data 0x9000 : {
+		*(.data)
+	}
+
+	/* 
+	* Next we put the rest of the code.
+	*/
+	.text 0xA000 : {
+		*(.text)
+	}
+
+	/*
+	* Finally comes everything else. A fun trick here is to put all other 
+	* sections into this section, which will be discarded by default.
+	*/
+	/DISCARD/ : {
+		*(*)
+	}
+}
+[/code]
+
+I wanted to have a clearly defined section for data and text so I explicitly stated their locations.  I also switched the positions, data appears first after the init block rather than second here.  For a larger kernel this may be an issue, but for what were doing this is plenty of space.  Obviously this didn't fix the problem, but is half of the solution.  A somewhat hacky fix is renaming the framebuffer.s file to bufferframe.s.  The make file builds everything in alphabetical order, so when we added data to the drawing.s file, the data was mapped before the framebuffer.s file's data, increasing the address.  Calling it bufferFrame puts it first to compile in the make file so the FrameBufferInfo gets the first spot in the data field at 0x9000 (you can confirm with the kernel.map file).  
+
+kernel.map
+[code]
+.data           0x0000000000009000      0xa28
+ *(.data)
+ .data          0x0000000000009000       0x30 build/bufferFrame.o
+ *fill*         0x0000000000009030       0xd0 
+ .data          0x0000000000009100      0x900 build/drawing.o
+ .data          0x0000000000009a00        0x4 build/gpio.o
+ .data          0x0000000000009a04        0x0 build/mailbox.o
+ .data          0x0000000000009a04        0x0 build/main.o
+ .data          0x0000000000009a04        0x0 build/random.o
+ .data          0x0000000000009a04        0x0 build/systemTimer.o
+ .data          0x0000000000009a04       0x24 build/tags.o
+[/code]
+
+Additionally you could just modify the make file to build the framebuffer file first.  After doing so I just played with the alignment and order of the data sections a bit and I was printing the cmdline.  Thrilling.  Here's how the data sections of "bufferFrame.s" and drawing.s look now:
+
+bufferFrame.s
+[code]
+.section .data
+.align 4
+@ .globl FrameBufferInfo 
+FrameBufferInfo:
+	.int 1024	/* #0 Width */
+	.int 768	/* #4 Height */
+	.int 1024	/* #8 vWidth */
+	.int 768	/* #12 vHeight */
+	.int 0		/* #16 GPU - Pitch */
+	.int 16		/* #20 Bit Depth */
+	.int 0		/* #24 X */
+	.int 0		/* #28 Y */
+	.int 0		/* #32 GPU - Pointer */
+	.int 0		/* #36 GPU - Size */
+[/code]
+I removed the global lable to FrameBufferInfo as I didn't see any other files using it.
+
+drawing.s
+[code]
+.section .data
+.align 8
+font:
+	.incbin "font.bin"
+
+.align 1
+foreColour:
+	.hword 0xFFFF
+
+.align 2
+graphicsAddress:
+	.int 0
+[/code]
+
+It was a huge relief to get it working, but I'm still curious why. It seems there is a happy zone in memory where the FrameBufferInfo structure lives. My thought was the FrameBufferInfo must live somewhere that both the CPU and GPU can access? I was under the impression that all memory is not accessible by both. Perhaps placing the font.bin data removed it from that happy place? I haven't seen any documentation that confirms this, it's just a thought. Maybe someone on the forum could enlighten me. If you're still having issues, check my github, I should have a solution posted shortly.
+
+for searching the forum: alex chadwick baking pi bakingpi screen03 incbin .incbin DrawCharacter DrawString Raspberry Pi 2 ATAGs linker memory map
