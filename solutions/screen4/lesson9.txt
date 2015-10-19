@@ -2,4 +2,6 @@ Lesson 9 SCREEN04
 
 Now that we can print strings, lesson 9 focuses on manipulating them, specifically emulating the sprintf function in C.  Sprintf creates a string based on another string and additional parameters.  For example sprintf can take arguments and generate the string value for any signed or unsigned number in any base.   In order to do so, we need to do some conversion in the form of binary division.  The algorithm for binary division is done in the same way we learned long division in elementary school.
 
-The next task is to implement number to string conversion.
+The next task is to implement number to string conversion.  We create thre functions to convert numbers into strings up to base 36.  The first function for signed strings checks to see if the number is greater than 0, if so it just passes the parameters to the unsigned string function.  If the number is greater than 0 the signage obviously doesn't matter.  Otherwise it sets the first byte to a dash, for negative and passes the negated verstion (making it positive) to the unsigned string function.  The unsigned string function actually converts the number into a string by doing iterations of divisions by the base value.  This process converts the string backwards though so the we create another function to reverse the string. 
+
+Luckily, with these added functions there were no changes required for the Raspberry Pi 2.  This is a sign of effective code.  Nothing in this additional code had ties directly to the hardware, which made it compatible on the Raspberry Pi 2.
