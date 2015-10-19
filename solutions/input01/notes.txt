@@ -1,0 +1,5 @@
+The template file provided has everything you need, don't just copy the make file into your old directory just use the new template.  The make file needs to be modified.  It needs to create the build directory otherwise make clean just deletes it.
+
+# Rule to make the object files.
+$(BUILD)%.o: $(SOURCE)%.s $(BUILD)
+	$(ARMGNU)-as -I $(SOURCE) $< -o $@

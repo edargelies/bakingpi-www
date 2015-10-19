@@ -1,123 +1,85 @@
-/******************************************************************************
-*	text.s
-*	 by Alex Chadwick
-*
-*	A sample assembly code implementation of the screen04 operating system.
-*	See main.s for details.
-*
-*	text.s contains code to do with manipulating text
-******************************************************************************/
-
-/* NEW
-* ReverseString reverses a string, with pointer in r0, and length in r1.
-* C++ Signature: void ReverseString(char* string, u32 length);
-*/
-.globl ReverseString
-ReverseString:
-	start .req r0
-	end .req r1
-
-	add end,start
-	sub end,#1
-	revLoop$:
-		cmp end,start
-		movls pc,lr
-
-		ldrb r2,[start]
-		ldrb r3,[end]
-		strb r3,[start]
-		strb r2,[end]
-		add start,#1
-		sub end,#1
-		b revLoop$
-
-/* NEW
-* UnsignedString converts the unsigned word in r0 and stores it to the address
-* in r1 and returns the length of the string in r0. If r1 is 0, this doesn't
-* actually output the string. The output string is not longer than 32
-* characters. The base of the number is given in r2. Base can be any value 
-* between 2 and 36.
-* C++ Signature: u32 UnsignedString(u32 value, char* string, u32 base)
-*/
-.globl UnsignedString
-UnsignedString:
-	value .req r0
-	string .req r5
-	base .req r6
-	length .req r7
-	push {r4,r5,r6,r7,lr}
-
-	mov string,r1
-	mov base,r2
-	mov length,#0
-
-	charLoop$:
-		mov r1,base
-		bl DivideU32
-		cmp r1,#9
-		addls r1,#'0'
-		addhi r1,#'a'-10
-		teq string,#0
-		strneb r1,[string,length]
-		add length,#1
-		teq value,#0
-		bne charLoop$
-		
-	.unreq value
-	.unreq base
-	teq string,#0
-	movne r0,string
-	movne r1,length
-	blne ReverseString
-	mov r0,length
-
-	pop {r4,r5,r6,r7,pc}
-	.unreq string
-	.unreq length
-
-/* NEW
-* SignedString converts the signed word in r0 and stores it to the address
-* in r1 and returns the length of the string in r0. If r1 is 0, this doesn't
-* actually output the string. The output string is not longer than 32
-* characters. The base of the number is given in r2. Base can be any value 
-* between 2 and 36.
-* C++ Signature: u32 SignedString(s32 value, char* string, u32 base);
-*/
 .globl SignedString
 SignedString:
-	value .req r0
-	string .req r1
-	cmp value,#0
+	val .req r0
+	dest .req r1
+	base .req r2
+	cmp val,#0
 	bge UnsignedString
-
-	rsb value,#0
-	teq string,#0
-	movne r3,#'-'
-	strneb r3,[string]
-	addne string,#1
+	cmp dest,#0
+	movgt r3,#'-'
+	strgt r3,[dest]
+	addgt dest,#1
+	neg val, val
 	push {lr}
 	bl UnsignedString
-	add r0,#1
+	add val,#1
 	pop {pc}
-	.unreq value
-	.unreq string
+	.unreq val
+	.unreq dest
+	.unreq base
+
+.globl UnsignedString
+UnsignedString:
+	val .req r0
+	dest .req r5
+	base .req r6
+	length .req r7
+	push {r4, r5, r6, r7, lr}
+
+	mov length,#0
+	mov base,r2
+	mov dest,r1
+	uSignloop$:
+		mov r1,base
+		bl DivideU32
+		cmp r1,#10
+	 	addhs r1,#'a'-10
+	 	addlo r1,#'0'
+	 	teq dest,#0
+	 	strneb r1,[dest,length]
+	 	add length,#1
+	 	cmp val,#0
+	 	bgt uSignloop$
+	cmp dest,#0
+	.unreq val
+	.unreq base
+	movhi r0,dest
+	movhi r1,length
+	blhi ReverseString
+	mov r0,length
+	pop {r4, r5, r6, r7, pc}
+	.unreq dest
+	.unreq length
+
+.globl ReverseString
+ReverseString:
+	string .req r0
+	length .req r1
+	temp1 .req r2
+	temp2 .req r3
+
+	add length,string
+	sub length,#1
+	revLoop$:
+		cmp length,string
+		bls revDone$
+
+		ldrb r2,[string]
+		ldrb r3,[length]
+		strb r3,[string]
+		strb r2,[length]
+		add string,#1
+		sub length,#1
+		b revLoop$
 		
-/* NEW
-* FormatString constructs a string based on the formating information in r0,
-* length in r1, and stores it in r2, with a variable number of arguments, and
-* returns the length of the constructed string. if r1 is 0, it doesn't output
-* the string.
-* C++ Signature: u32 FormatString(char* format, u32 length, char* dest, ...);
-* The format is akin to printf:
-*  %% outputs a '%'
-*  %c outputs the next argument as a character.
-*  %s outputs the string in the next argument, length in the one after.
-*  %d outputs the next argument as a signed base 10 number.
-*  %u outputs the next argument as an unsigned base 10 number.
-*  %x outputs the next argument as a hexadecimal number.
-*  %b outputs the next argument as a binary number.
-*  %o outputs the next argument as a octal number.
-*/
+	revDone$:
+		.unreq string
+		.unreq length
+		.unreq temp1
+		.unreq temp2
+		movls pc,lr
+
+
 .globl FormatString
 FormatString:
 	format .req r4
@@ -156,12 +118,12 @@ FormatString:
 		subs formatLength,#1
 		movlt r0,length
 		poplt {r4,r5,r6,r7,r8,r9,pc}
-		
+
 		ldrb r0,[format]
 		add format,#1
 		teq r0,#'%'
 		beq formatChar$
-				
+
 		teq r0,#'c'
 		moveq r0,nextArg
 		ldreq nextArg,[argList]
@@ -170,10 +132,10 @@ FormatString:
 
 		teq r0,#'s'
 		beq formatString$
-				
+
 		teq r0,#'d'
 		beq formatSigned$
-				
+
 		teq r0,#'u'
 		teqne r0,#'x'
 		teqne r0,#'b'
@@ -184,7 +146,7 @@ FormatString:
 
 	formatString$:
 		ldrb r0,[nextArg]
-		teq r0,#'\0'		
+		teq r0,#0x0
 		ldreq nextArg,[argList]
 		addeq argList,#4
 		beq formatLoop$
@@ -192,7 +154,7 @@ FormatString:
 		teq dest,#0
 		strneb r0,[dest]
 		addne dest,#1
-		add nextArg,#1		
+		add nextArg,#1
 		b formatString$
 
 	formatSigned$:
@@ -216,7 +178,6 @@ FormatString:
 		moveq r2,#2
 		teq r0,#'o'
 		moveq r2,#8
-
 		mov r0,nextArg
 		ldr nextArg,[argList]
 		add argList,#4
@@ -226,4 +187,3 @@ FormatString:
 		addne dest,r0
 		add length,r0
 		b formatLoop$
-		

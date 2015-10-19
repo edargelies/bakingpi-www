@@ -34,7 +34,7 @@ main:
 	fbInfoAddr .req r4
 	mov fbInfoAddr,r0
 
-@ Format strings
+@ Draw the command line
 	bl SetGraphicsAddress
 	mov r4,#0
 	loop$:

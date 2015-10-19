@@ -15,13 +15,13 @@ DivideU32:
 
 	divideU32Loop$:
 
-		cmp remainder,current
-		blt divideU32LoopContinue$
+	cmp remainder,current
+	blt divideU32LoopContinue$
 
-		add result,result,#1
-		subs remainder,current
-		lsleq result,shift
-		beq divideU32Return$
+	add result,result,#1
+	subs remainder,current
+	lsleq result,shift
+	beq divideU32Return$
 
 	divideU32LoopContinue$:
 

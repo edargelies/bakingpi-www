@@ -1,0 +1,104 @@
+
+Discarded input sections
+
+ .bss           0x0000000000000000        0x0 build/bufferFrame.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/bufferFrame.o
+ .bss           0x0000000000000000        0x0 build/drawing.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/drawing.o
+ .bss           0x0000000000000000        0x0 build/gpio.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/gpio.o
+ .bss           0x0000000000000000        0x0 build/mailbox.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/mailbox.o
+ .bss           0x0000000000000000        0x0 build/main.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/main.o
+ .bss           0x0000000000000000        0x0 build/math.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/math.o
+ .bss           0x0000000000000000        0x0 build/systemTimer.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/systemTimer.o
+ .bss           0x0000000000000000        0x0 build/tags.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/tags.o
+ .bss           0x0000000000000000        0x0 build/text.o
+ .ARM.attributes
+                0x0000000000000000       0x14 build/text.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD build/bufferFrame.o
+LOAD build/drawing.o
+LOAD build/gpio.o
+LOAD build/mailbox.o
+LOAD build/main.o
+LOAD build/math.o
+LOAD build/systemTimer.o
+LOAD build/tags.o
+LOAD build/text.o
+
+.init           0x0000000000008000        0x4
+ *(.init)
+ .init          0x0000000000008000        0x4 build/main.o
+                0x0000000000008000                _start
+
+.data           0x0000000000009000      0xa3d
+ *(.data)
+ .data          0x0000000000009000       0x30 build/bufferFrame.o
+ *fill*         0x0000000000009030       0xd0 
+ .data          0x0000000000009100      0x900 build/drawing.o
+ .data          0x0000000000009a00        0x4 build/gpio.o
+ .data          0x0000000000009a04        0x0 build/mailbox.o
+ .data          0x0000000000009a04       0x15 build/main.o
+ .data          0x0000000000009a19        0x0 build/math.o
+ .data          0x0000000000009a19        0x0 build/systemTimer.o
+ .data          0x0000000000009a19       0x24 build/tags.o
+ .data          0x0000000000009a3d        0x0 build/text.o
+
+.text           0x000000000000a000      0x710
+ *(.text)
+ .text          0x000000000000a000       0x60 build/bufferFrame.o
+                0x000000000000a000                InitialiseFrameBuffer
+ .text          0x000000000000a060      0x1d8 build/drawing.o
+                0x000000000000a060                SetForeColour
+                0x000000000000a078                SetGraphicsAddress
+                0x000000000000a084                DrawPixel
+                0x000000000000a0d0                DrawLine
+                0x000000000000a14c                DrawCharacter
+                0x000000000000a1b8                DrawString
+ .text          0x000000000000a238       0xcc build/gpio.o
+                0x000000000000a238                GetGpioAddress
+                0x000000000000a240                SetGpioFunction
+                0x000000000000a278                SetGpio
+                0x000000000000a2b4                Debug
+ .text          0x000000000000a304       0x78 build/mailbox.o
+                0x000000000000a304                GetMailboxBase
+                0x000000000000a30c                MailboxWrite
+                0x000000000000a340                MailboxRead
+ .text          0x000000000000a37c       0xb4 build/main.o
+ .text          0x000000000000a430       0x48 build/math.o
+                0x000000000000a430                DivideU32
+ .text          0x000000000000a478       0x40 build/systemTimer.o
+                0x000000000000a478                GetSystemTimerAddress
+                0x000000000000a480                GetTimestamp
+                0x000000000000a490                Wait
+ .text          0x000000000000a4b8       0x74 build/tags.o
+                0x000000000000a4b8                FindTag
+ .text          0x000000000000a52c      0x1e4 build/text.o
+                0x000000000000a52c                ReverseString
+                0x000000000000a558                UnsignedString
+                0x000000000000a5a8                SignedString
+                0x000000000000a5d4                FormatString
+
+/DISCARD/
+ *(*)
+OUTPUT(build/output.elf elf32-littlearm)

@@ -1,0 +1,5 @@
+Lesson 9 SCREEN04
+
+Now that we can print strings, lesson 9 focuses on manipulating them, specifically emulating the sprintf function in C.  Sprintf creates a string based on another string and additional parameters.  For example sprintf can take arguments and generate the string value for any signed or unsigned number in any base.   In order to do so, we need to do some conversion in the form of binary division.  The algorithm for binary division is done in the same way we learned long division in elementary school.
+
+The next task is to implement number to string conversion.
