@@ -111,7 +111,7 @@
 					<dt>terminalView</dt>
 					<dd>
 						The first character on the screen at present. We can use this to scroll the screen.</dd>
-					<dt>temrinalColour</dt>
+					<dt>terminalColour</dt>
 					<dd>
 						The colour to draw new characters with.</dd>
 				</dl>
@@ -122,13 +122,13 @@
 					</p>
 				</div>
 				<p>
-					<img alt="Diagram showing hellow world being inserted into a circular buffer of size 5."
+					<img alt="Diagram showing hello world being inserted into a circular buffer of size 5."
 						src="images/circular_buffer.png" />
-					The reason why terminalStart needs to be stored is because termainlBuffer should
+					The reason why terminalStart needs to be stored is because terminalBuffer should
 					be a circular buffer. This means that when the buffer is completely full, the end
 					'wraps' round to the start, and so the character after the very last one is the
 					first one. Thus, we need to advance terminalStart so we know that we've done this.
-					When wokring with the buffer this can easily be implemented by checking if the index
+					When working with the buffer this can easily be implemented by checking if the index
 					goes beyond the end of the buffer, and setting it back to the beginning if it does.
 					Circular buffers are a common and clever way of storing a lot of data, where only
 					the most recent data is important. It allows us to keep writing indefinitely, while
