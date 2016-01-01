@@ -33,7 +33,7 @@ MailboxWrite:
 	add value,channel
 	.unreq channel
 	
-	@ Address 0x3F0B8AC is the write mailbox
+	@ Address 0x3F00B8A0 is the write mailbox
 	str value,[mailbox,#0x20]
 	.unreq value
 	.unreq mailbox
