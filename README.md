@@ -1,5 +1,7 @@
 # Baking Pi: bakingpi-www Repository
 
+_This fork is an adaptation to work with the Raspberry Pi 2. It is 80% complete, due to the lack of a USB driver._
+
 This repository contains the HTML pages comprising the [Baking Pi: Operating Systems Development](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) tutorial.
 
 Submissions are very welcome, especially fixes to existing content. In order to contribute, please fork this repository, make your changes and send a GitHub [pull request](http://help.github.com/send-pull-requests/). Remember, any changes you make will continue to be subject to the [project's license](https://github.com/chadderz121/bakingpi-www/blob/master/LICENSE.md).
